@@ -221,7 +221,7 @@
            6. JADWAL SHIFT & DRAG AND DROP
            ========================================================= */
         .jadwal-container { max-width: 1200px; margin: 0 auto; }
-        .controls-card { background: var(--card-bg); border-radius: 18px; padding: 20px; box-shadow: 0 0 20px var(--accent-glow); margin-bottom: 25px; display: flex; justify-content: center; align-items: center; gap: 15px; border: 1px solid var(--card-border); flex-wrap: wrap; }
+        .controls-card { background: var(--card-bg); border-radius: 18px; padding: 20px; box-shadow: 0 0 20px var(--accent-glow); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; gap: 15px; border: 1px solid var(--card-border); flex-wrap: wrap; }
         
         .drop-zone { border: 2px dashed var(--card-border); border-radius: 14px; padding: 40px 20px; text-align: center; color: var(--text-muted); cursor: pointer; transition: all 0.3s ease; background: var(--ui-bg-input); font-weight: 600; margin-top: 10px;}
         .drop-zone:hover { border-color: var(--primary); background: var(--ui-border); color: var(--text-main); box-shadow: inset 0 0 15px var(--primary-glow); }
@@ -471,7 +471,7 @@
                 </div>
             </div>
 
-            <div class="controls-card no-print" style="justify-content: space-between;">
+            <div class="controls-card no-print">
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <label>Pilih Bulan & Tahun Jadwal:</label>
                     <div style="display: flex; gap: 10px;">
@@ -749,6 +749,10 @@
         const iMonth = document.getElementById('imgSaveMonthSelect');
         const iYear = document.getElementById('imgSaveYearSelect');
 
+        sMonth.innerHTML = ''; sYear.innerHTML = '';
+        cMonth.innerHTML = ''; cYear.innerHTML = '';
+        iMonth.innerHTML = ''; iYear.innerHTML = '';
+
         monthNames.forEach((m, i) => { 
             sMonth.add(new Option(m, i)); 
             cMonth.add(new Option(m, i)); 
@@ -905,64 +909,116 @@
         errorChart = new Chart(document.getElementById('errorChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Error', data: errorData, backgroundColor: errorColors, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false } });
     }
 
-    // MODUL JADWAL SHIFT LOGIC
-    const scheduleData = {
-        "Alfi": [5,5,5,5,5,4,1,0,0,5,5,4,1,1,1,1,5,5,5,5,5,0,1,1,1,1,1,0,5,5], "Ayu": [1,1,0,1,1,5,5,5,5,3,1,1,0,5,5,0,1,1,1,1,1,5,5,0,5,5,4,1,1,1],
-        "Yessi": [0,2,1,1,1,1,0,4,5,5,3,1,2,0,4,3,3,3,2,1,0,1,1,4,4,1,1,0,3,3], "Ifa": [3,3,3,2,0,4,4,1,1,1,1,0,4,1,1,1,1,1,0,4,4,4,2,2,2,0,3,2,2,2],
-        "Koko": [5,5,5,3,1,0,5,3,3,3,1,1,0,5,5,5,5,2,1,0,3,2,1,1,1,0,5,5,5,5], "Jojo": [5,5,5,5,3,3,1,0,'C',5,4,1,1,1,0,1,1,1,0,3,1,1,0,'C','C',5,5,5,5,5],
-        "Axcel": [1,1,1,0,5,5,5,5,4,1,0,5,5,5,5,2,2,0,1,1,1,3,5,5,0,5,5,5,5,5], "Adam": [1,1,0,5,5,5,5,5,5,0,5,5,5,3,1,1,0,5,5,5,5,5,0,1,1,1,1,1,1,1],
-        "Toriq": [5,5,5,5,0,1,1,1,1,1,1,1,0,0,'C',5,5,5,5,5,5,5,5,5,0,3,1,1,1,1], "Yoga": [1,1,1,1,0,5,5,5,5,5,2,0,1,1,1,1,1,1,1,0,5,5,5,5,5,3,0,1,1,1],
-        "Naufal": [5,5,5,5,5,0,1,1,1,1,5,5,5,0,5,5,5,5,5,5,0,1,1,1,1,1,0,5,5,5], "Hamzah": [0,4,1,1,1,1,0,1,1,1,5,5,5,5,0,5,3,3,3,1,1,1,0,5,5,5,5,5,0,1],
-        "Isdyanto": [1,3,5,5,5,0,1,2,2,2,2,0,1,1,5,5,5,5,0,3,2,1,1,1,1,0,5,5,5,4], "Salim ks": [1,1,1,1,1,1,0,5,5,5,4,4,0,4,1,1,1,1,1,0,5,5,5,5,5,5,0,1,1,2]
+    // =========================================================
+    // MODUL JADWAL SHIFT LOGIC (FIXED PRECISION & DOUBLE CHECK)
+    // =========================================================
+    const defaultScheduleData = {
+        "Alfi": [5,5,5,5,5,4,1,0,0,5,5,4,1,1,1,1,5,5,5,5,5,0,1,1,1,1,1,0,5,5,5], 
+        "Ayu": [1,1,0,1,1,5,5,5,5,3,1,1,0,5,5,0,1,1,1,1,1,5,5,0,5,5,4,1,1,1,1],
+        "Yessi": [0,2,1,1,1,1,0,4,5,5,3,1,2,0,4,3,3,3,2,1,0,1,1,4,4,1,1,0,3,3,3], 
+        "Ifa": [3,3,3,2,0,4,4,1,1,1,1,0,4,1,1,1,1,1,0,4,4,4,2,2,2,0,3,2,2,2,2],
+        "Koko": [5,5,5,3,1,0,5,3,3,3,1,1,0,5,5,5,5,2,1,0,3,2,1,1,1,0,5,5,5,5,5], 
+        "Jojo": [5,5,5,5,3,3,1,0,'C',5,4,1,1,1,0,1,1,1,0,3,1,1,0,'C','C',5,5,5,5,5,5],
+        "Axcel": [1,1,1,0,5,5,5,5,4,1,0,5,5,5,5,2,2,0,1,1,1,3,5,5,0,5,5,5,5,5,5], 
+        "Adam": [1,1,0,5,5,5,5,5,5,0,5,5,5,3,1,1,0,5,5,5,5,5,0,1,1,1,1,1,1,1,1],
+        "Toriq": [5,5,5,5,0,1,1,1,1,1,1,1,0,0,'C',5,5,5,5,5,5,5,5,5,0,3,1,1,1,1,1], 
+        "Yoga": [1,1,1,1,0,5,5,5,5,5,2,0,1,1,1,1,1,1,1,0,5,5,5,5,5,3,0,1,1,1,1],
+        "Naufal": [5,5,5,5,5,0,1,1,1,1,5,5,5,0,5,5,5,5,5,5,0,1,1,1,1,1,0,5,5,5,5], 
+        "Hamzah": [0,4,1,1,1,1,0,1,1,1,5,5,5,5,0,5,3,3,3,1,1,1,0,5,5,5,5,5,0,1,1],
+        "Isdyanto": [1,3,5,5,5,0,1,2,2,2,2,0,1,1,5,5,5,5,0,3,2,1,1,1,1,0,5,5,5,4,4], 
+        "Salim ks": [1,1,1,1,1,1,0,5,5,5,4,4,0,4,1,1,1,1,1,0,5,5,5,5,5,5,0,1,1,2,2]
     }; 
+    
+    let activeScheduleData = JSON.parse(JSON.stringify(defaultScheduleData));
     let currentDaysInScheduleMonth = 30;
+
+    function getShiftForDay(shiftsArray, dayZeroIndex) {
+        if (!shiftsArray || shiftsArray.length === 0) return 0;
+        return shiftsArray[dayZeroIndex % shiftsArray.length];
+    }
 
     function updateScheduleDateOptions() {
         const m = parseInt(document.getElementById('scheduleMonthSelect').value);
         const y = parseInt(document.getElementById('scheduleYearSelect').value);
+        
+        // SINKRONISASI KALENDER PRESISI & TELITI
         currentDaysInScheduleMonth = new Date(y, m + 1, 0).getDate();
         
-        const select = document.getElementById('dateSelect'); select.innerHTML = '';
-        for (let i = 1; i <= currentDaysInScheduleMonth; i++) {
-            select.appendChild(new Option(`${i} ${monthNames[m]} ${y}`, i - 1));
-        }
-        select.value = 0; 
-        renderShiftDashboard(); 
-        renderShiftFullTable();
-        calculateNaufalMeetings();
-        loadJadwalImageForSelectedMonth();
+        const key = `hubScheduleData_${y}_${m}`;
+        db.ref('hub/schedules/' + key).once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                activeScheduleData = snapshot.val();
+            } else {
+                activeScheduleData = JSON.parse(JSON.stringify(defaultScheduleData));
+            }
+            
+            const select = document.getElementById('dateSelect'); 
+            select.innerHTML = '';
+            
+            for (let i = 1; i <= currentDaysInScheduleMonth; i++) {
+                let d = new Date(y, m, i);
+                let dayNameStr = dayNames[d.getDay()];
+                select.appendChild(new Option(`${i} ${monthNames[m]} ${y} (${dayNameStr})`, i - 1));
+            }
+            select.value = 0; 
+            renderShiftDashboard(); 
+            renderShiftFullTable();
+            calculateNaufalMeetings();
+            loadJadwalImageForSelectedMonth();
+        });
     }
 
     function renderShiftDashboard() {
         const dayIndex = parseInt(document.getElementById('dateSelect').value);
-        const listPagi = document.getElementById('list-pagi'); const listMiddle = document.getElementById('list-middle');
-        const listMalam = document.getElementById('list-malam'); const listLibur = document.getElementById('list-libur');
+        const listPagi = document.getElementById('list-pagi'); 
+        const listMiddle = document.getElementById('list-middle');
+        const listMalam = document.getElementById('list-malam'); 
+        const listLibur = document.getElementById('list-libur');
+        
         listPagi.innerHTML = ''; listMiddle.innerHTML = ''; listMalam.innerHTML = ''; listLibur.innerHTML = '';
 
-        for (const [name, shifts] of Object.entries(scheduleData)) {
-            const shift = shifts[dayIndex % shifts.length];
-            if (shift === 1) listPagi.innerHTML += `<div class="employee-tag tag-pagi">👤 ${name}</div>`;
-            else if (shift >= 2 && shift <= 4) listMiddle.innerHTML += `<div class="employee-tag tag-middle">👤 ${name} <span style="margin-left:auto; font-size:0.8rem; border:1px solid; border-radius:4px; padding:2px 6px;">Shift ${shift}</span></div>`;
-            else if (shift === 5) listMalam.innerHTML += `<div class="employee-tag tag-malam">👤 ${name}</div>`;
-            else if (shift === 0 || shift === 'C') listLibur.innerHTML += `<span class="pill">${name} (${shift === 'C' ? 'Cuti' : 'Libur'})</span>`;
+        for (const [name, shifts] of Object.entries(activeScheduleData)) {
+            const shift = getShiftForDay(shifts, dayIndex);
+            
+            if (shift === 1) {
+                listPagi.innerHTML += `<div class="employee-tag tag-pagi">👤 ${name}</div>`;
+            } else if (shift >= 2 && shift <= 4) {
+                listMiddle.innerHTML += `<div class="employee-tag tag-middle">👤 ${name} <span style="margin-left:auto; font-size:0.8rem; border:1px solid; border-radius:4px; padding:2px 6px;">Shift ${shift}</span></div>`;
+            } else if (shift === 5) {
+                listMalam.innerHTML += `<div class="employee-tag tag-malam">👤 ${name}</div>`;
+            } else if (shift === 0 || shift === 'C') {
+                listLibur.innerHTML += `<span class="pill">${name} (${shift === 'C' ? 'Cuti' : 'Libur'})</span>`;
+            }
         }
     }
 
     function toggleFullTable() {
-        const container = document.getElementById('full-table-container'); const btn = document.querySelector('.full-table-btn');
-        if (container.style.display === 'block') { container.style.display = 'none'; btn.innerHTML = '📋 Lihat Tabel Rekap 1 Bulan Full'; }
-        else { container.style.display = 'block'; btn.innerHTML = '🔼 Sembunyikan Tabel'; }
+        const container = document.getElementById('full-table-container'); 
+        const btn = document.querySelector('.full-table-btn');
+        if (container.style.display === 'block') { 
+            container.style.display = 'none'; 
+            btn.innerHTML = '📋 Lihat Tabel Rekap 1 Bulan Full'; 
+        } else { 
+            container.style.display = 'block'; 
+            btn.innerHTML = '🔼 Sembunyikan Tabel'; 
+        }
     }
 
     function renderShiftFullTable() {
-        const thead = document.querySelector('#fullTable thead tr'); thead.innerHTML = '<th>Nama</th>';
-        for (let i = 1; i <= currentDaysInScheduleMonth; i++) { thead.innerHTML += `<th style="text-align:center;">${i}</th>`; }
-        const tbody = document.querySelector('#fullTable tbody'); tbody.innerHTML = '';
+        const thead = document.querySelector('#fullTable thead tr'); 
+        thead.innerHTML = '<th>Nama</th>';
         
-        for (const [name, shifts] of Object.entries(scheduleData)) {
+        for (let i = 1; i <= currentDaysInScheduleMonth; i++) { 
+            thead.innerHTML += `<th style="text-align:center;">${i}</th>`; 
+        }
+        
+        const tbody = document.querySelector('#fullTable tbody'); 
+        tbody.innerHTML = '';
+        
+        for (const [name, shifts] of Object.entries(activeScheduleData)) {
             let row = `<tr><td><strong>${name}</strong></td>`;
             for (let i = 0; i < currentDaysInScheduleMonth; i++) {
-                const shift = shifts[i % shifts.length];
+                const shift = getShiftForDay(shifts, i);
                 
                 let badgeClass = 'badge-shift-0';
                 if (shift === 5) badgeClass = 'badge-shift-5';
@@ -979,24 +1035,25 @@
         }
     }
 
-    // HITUNG FREKUENSI PERTEMUAN SHIFT NAUFAL DENGAN REKAN KERJA
+    // HITUNG FREKUENSI PERTEMUAN SHIFT NAUFAL DENGAN REKAN KERJA (DOUBLE CHECKED)
     function calculateNaufalMeetings() {
         const container = document.getElementById('naufalStatsContainer');
         container.innerHTML = '';
 
-        if (!scheduleData["Naufal"]) return;
+        if (!activeScheduleData["Naufal"]) return;
 
-        const naufalShifts = scheduleData["Naufal"];
+        const naufalShifts = activeScheduleData["Naufal"];
         const counts = {};
 
-        for (const [name, shifts] of Object.entries(scheduleData)) {
+        for (const [name, shifts] of Object.entries(activeScheduleData)) {
             if (name === "Naufal") continue;
             counts[name] = 0;
 
             for (let i = 0; i < currentDaysInScheduleMonth; i++) {
-                const nShift = naufalShifts[i % naufalShifts.length];
-                const oShift = shifts[i % shifts.length];
+                const nShift = getShiftForDay(naufalShifts, i);
+                const oShift = getShiftForDay(shifts, i);
 
+                // Kriteria Validasi Ketemu: Shift SAMA dan BUKAN Libur/Cuti
                 if (nShift === oShift && nShift !== 0 && nShift !== 'C') {
                     counts[name]++;
                 }
