@@ -260,6 +260,44 @@
         .table-scroll-wrapper::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 4px; }
         .table-scroll-wrapper::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
+        /* TABEL STATISTIK PERTEMUAN NAUFAL */
+        .naufal-stats-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 0 25px var(--primary-glow);
+            margin-top: 30px;
+        }
+        .naufal-stats-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stats-item {
+            background: var(--ui-bg-input);
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid var(--ui-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stats-name { font-size: 0.95rem; font-weight: 700; color: var(--text-main); }
+        .stats-count { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+
         @media print {
             body { background: white; color: black; padding: 0; }
             .no-print { display: none !important; }
@@ -443,6 +481,17 @@
             <button class="full-table-btn no-print" onclick="toggleFullTable()">📋 Lihat Tabel Rekap 1 Bulan Full</button>
             <div class="table-container" id="full-table-container">
                 <table id="fullTable"><thead><tr><th>Nama</th></tr></thead><tbody></tbody></table>
+            </div>
+
+            <!-- ANALISIS PERTEMUAN NAUFAL -->
+            <div class="naufal-stats-card">
+                <div class="naufal-stats-title">
+                    <span>🤝 Analisis Pertemuan Shift NAUFAL</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    Frekuensi NAUFAL berada di shift kerja yang sama dengan rekan kerja selama bulan yang dipilih:
+                </p>
+                <div class="stats-grid" id="naufalStatsContainer"></div>
             </div>
         </div>
     </section>
@@ -862,6 +911,7 @@
         select.value = 0; 
         renderShiftDashboard(); 
         renderShiftFullTable();
+        calculateNaufalMeetings();
         loadJadwalImageForSelectedMonth();
     }
 
@@ -902,6 +952,44 @@
         }
     }
 
+    // HITUNG FREKUENSI PERTEMUAN SHIFT NAUFAL DENGAN REKAN KERJA
+    function calculateNaufalMeetings() {
+        const container = document.getElementById('naufalStatsContainer');
+        container.innerHTML = '';
+
+        if (!scheduleData["Naufal"]) return;
+
+        const naufalShifts = scheduleData["Naufal"];
+        const counts = {};
+
+        for (const [name, shifts] of Object.entries(scheduleData)) {
+            if (name === "Naufal") continue;
+            counts[name] = 0;
+
+            for (let i = 0; i < currentDaysInScheduleMonth; i++) {
+                const nShift = naufalShifts[i % naufalShifts.length];
+                const oShift = shifts[i % shifts.length];
+
+                // Hitung jika sama-sama masuk shift kerja yang sama (Pagi, Middle, atau Malam) dan bukan libur/cuti (0/'C')
+                if (nShift === oShift && nShift !== 0 && nShift !== 'C') {
+                    counts[name]++;
+                }
+            }
+        }
+
+        // Urutkan dari frekuensi terbanyak
+        const sortedEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+        sortedEntries.forEach(([name, count]) => {
+            container.innerHTML += `
+                <div class="stats-item">
+                    <span class="stats-name">👤 Ketemu ${name}</span>
+                    <span class="stats-count">${count}x</span>
+                </div>
+            `;
+        });
+    }
+
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const imagePreviewContainer = document.getElementById('image-preview-container');
@@ -918,7 +1006,6 @@
                 imagePreviewContainer.style.display = 'block'; 
                 dropZone.style.display = 'none';
                 
-                // Samakan default pilihan bulan/tahun simpan gambar dengan pilihan bulan/tahun jadwal saat ini
                 document.getElementById('imgSaveMonthSelect').value = document.getElementById('scheduleMonthSelect').value;
                 document.getElementById('imgSaveYearSelect').value = document.getElementById('scheduleYearSelect').value;
             };
@@ -967,7 +1054,6 @@
             db.ref(key).set(uploadedImage.src);
             alert(`✅ Gambar Jadwal untuk ${monthNames[targetM]} ${targetY} tersimpan ke Cloud!`);
             
-            // Atur pilihan jadwal agar langsung menampilkan bulan/tahun gambar baru tersebut
             document.getElementById('scheduleMonthSelect').value = targetM;
             document.getElementById('scheduleYearSelect').value = targetY;
             updateScheduleDateOptions();
