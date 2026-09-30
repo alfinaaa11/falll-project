@@ -784,8 +784,7 @@
             if (snapshot.exists()) { 
                 kpiData = snapshot.val(); 
             } else { 
-                kpiData = JSON.parse(JSON.stringify(defaultKpiData)); 
-                db.ref('hub/kpiDataWeb').set(kpiData);
+                kpiData = JSON.parse(JSON.stringify(defaultKpiData));
             }
             renderKpiInputTable(); updateKpiReport(false);
         });
@@ -794,8 +793,6 @@
             if (snapshot.exists()) { 
                 document.getElementById('input-nama').value = snapshot.val(); 
                 document.getElementById('preview-nama').innerText = snapshot.val();
-            } else {
-                db.ref('hub/kpiNameWeb').set('NAUFAL');
             }
         });
     }
@@ -910,7 +907,7 @@
     }
 
     // =========================================================
-    // MODUL JADWAL SHIFT LOGIC (FIXED PRECISION & DOUBLE CHECK)
+    // MODUL JADWAL SHIFT LOGIC (MENCEGAH AUTO-OVERWRITE)
     // =========================================================
     const defaultScheduleData = {
         "Alfi": [5,5,5,5,5,4,1,0,0,5,5,4,1,1,1,1,5,5,5,5,5,0,1,1,1,1,1,0,5,5,5], 
@@ -941,7 +938,6 @@
         const m = parseInt(document.getElementById('scheduleMonthSelect').value);
         const y = parseInt(document.getElementById('scheduleYearSelect').value);
         
-        // SINKRONISASI KALENDER PRESISI & TELITI
         currentDaysInScheduleMonth = new Date(y, m + 1, 0).getDate();
         
         const key = `hubScheduleData_${y}_${m}`;
@@ -1035,7 +1031,7 @@
         }
     }
 
-    // HITUNG FREKUENSI PERTEMUAN SHIFT NAUFAL DENGAN REKAN KERJA (DOUBLE CHECKED)
+    // HITUNG FREKUENSI PERTEMUAN SHIFT NAUFAL DENGAN REKAN KERJA
     function calculateNaufalMeetings() {
         const container = document.getElementById('naufalStatsContainer');
         container.innerHTML = '';
@@ -1053,7 +1049,6 @@
                 const nShift = getShiftForDay(naufalShifts, i);
                 const oShift = getShiftForDay(shifts, i);
 
-                // Kriteria Validasi Ketemu: Shift SAMA dan BUKAN Libur/Cuti
                 if (nShift === oShift && nShift !== 0 && nShift !== 'C') {
                     counts[name]++;
                 }
@@ -1144,7 +1139,9 @@
         }
     }
 
-    // MODUL COUNTER PAGE LOGIC
+    // =========================================================
+    // MODUL COUNTER PAGE LOGIC (MENCEGAH AUTO-OVERWRITE)
+    // =========================================================
     let counterData = []; let counterChartInstance; let counterSaveTimeout;
 
     function loadCounterDataForSelectedMonth() {
@@ -1161,17 +1158,12 @@
             if (snapshot.exists()) {
                 counterData = snapshot.val();
             } else {
-                const localData = localStorage.getItem(key);
-                if (localData) {
-                    counterData = JSON.parse(localData);
-                } else {
-                    counterData = [];
-                    for (let i = 1; i <= daysInMonth; i++) {
-                        let d = new Date(y, m, i);
-                        counterData.push({ dayNum: i, dayName: dayNames[d.getDay()], val: 0 });
-                    }
+                // TAMPILKAN FORMAT KOSONG TANPA MENIMPA FIREBASE DENGAN DATA AWAL
+                counterData = [];
+                for (let i = 1; i <= daysInMonth; i++) {
+                    let d = new Date(y, m, i);
+                    counterData.push({ dayNum: i, dayName: dayNames[d.getDay()], val: 0 });
                 }
-                db.ref('hub/counter/' + key).set(counterData);
             }
             renderCounterTable();
             if (document.getElementById('page-counter').classList.contains('active')) { drawCounterChart(); }
@@ -1261,22 +1253,6 @@
         });
     }
 
-    // SKRIP MIGRASI OTOMATIS
-    function migrateOldLocalStorageToFirebase() {
-        const oldKpi = localStorage.getItem('hubKpiDataWeb');
-        if (oldKpi) {
-            try { db.ref('hub/kpiDataWeb').set(JSON.parse(oldKpi)); } catch(e){}
-        }
-        const oldName = localStorage.getItem('hubKpiNameWeb');
-        if (oldName) { db.ref('hub/kpiNameWeb').set(oldName); }
-        for (let i = 0; i < localStorage.length; i++) {
-            let key = localStorage.key(i);
-            if (key.startsWith('hubCounterData_')) {
-                try { db.ref('hub/counter/' + key).set(JSON.parse(localStorage.getItem(key))); } catch(e){}
-            }
-        }
-    }
-
     // APP INITIALIZATION
     window.onload = function() {
         initColorWheel();
@@ -1285,7 +1261,6 @@
         updateNeonColor(savedColor);
 
         populateMonthYearSelects();
-        migrateOldLocalStorageToFirebase();
 
         loadKpiData();
         updateScheduleDateOptions();
